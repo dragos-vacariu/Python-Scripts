@@ -1,8 +1,9 @@
 SCRIPT: detect_log_silence.py 
-Can be used for detection and logging of audio files which contain silent segments.
+Can be used for silence detection and logging of audio files which contain silent segments.
 
 SCRIPT: detect_log_and_trim_silence
-Can be used for a more enhanced and accurate detection and trimming of audio files which contain silent segments.
+Can be used for a more enhanced and accurate silence detection, silence trimming, and volume normalization of 
+audio files which contain silent segments.
 
 
 THESE PYTHON SCRIPTS REQUIRES FFMPEG LIBRARY
