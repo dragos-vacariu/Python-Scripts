@@ -6,7 +6,7 @@ import os
 ROOT_FOLDER = r"D:\music all\music"  # root folder to scan recursively
 NOISE_LEVEL = -50   # dB threshold (more negative = more sensitive)
 MIN_SILENCE = 3.0   # seconds of silence to count
-LOG_FILE = "silence_log.txt"
+LOG_FILE = "detect_log_silence_log.txt"
 
 # --- Regex to capture silencedetect output ---
 silence_re = re.compile(r"silence_start")
