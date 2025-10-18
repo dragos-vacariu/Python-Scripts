@@ -1,0 +1,15 @@
+Silence detection and safe trimming results
+===========================================
+
+[NO SILENCE] blues\Adele - Set fire to the rain.mp3
+[NO SILENCE] blues\Akon - Keep you much longer.mp3
+[KEEP ORIGINAL] blues\Alanda Grace - Black red rose.mp3
+[KEEP ORIGINAL] blues\Andy Clayton - Bring me down.mp3
+[NO SILENCE] blues\Anne's - Atat de greu.mp3
+[KEEP ORIGINAL] blues\Antonia - Marionette.mp3
+[NO SILENCE] blues\Avril Lavigne - Innocence.mp3
+[NO SILENCE] blues\Avril Lavigne - Take me away.mp3
+[KEEP ORIGINAL] blues\Awolnation - Sail.mp3
+[NO SILENCE] blues\Band Of Horses - The Funeral.mp3
+[TRIMMED] blues\Blue October - Feel Again.mp3 (start=0.00, end=343.794292)
+[TRIMMED] blues\Bon Jovi - Always.mp3 (start=0.00, end=351.748095)

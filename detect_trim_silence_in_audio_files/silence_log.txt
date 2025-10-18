@@ -1,0 +1,16 @@
+Silence detection results
+=========================
+
+[SILENCE FOUND] D:\music all\music\blues\Alanda Grace - Black red rose.mp3
+[SILENCE FOUND] D:\music all\music\blues\Andy Clayton - Bring me down.mp3
+[SILENCE FOUND] D:\music all\music\blues\Antonia - Marionette.mp3
+[SILENCE FOUND] D:\music all\music\blues\Awolnation - Sail.mp3
+[SILENCE FOUND] D:\music all\music\blues\Britney Spears - Everytime.mp3
+[SILENCE FOUND] D:\music all\music\blues\Carrie Underwood - Starts with goodbye.mp3
+[SILENCE FOUND] D:\music all\music\blues\Christina Aguilera - Hurt.mp3
+[SILENCE FOUND] D:\music all\music\blues\Damien Rice - 9 Crimes.mp3
+[SILENCE FOUND] D:\music all\music\blues\Dana - Am nimic fara tine.mp3
+[SILENCE FOUND] D:\music all\music\blues\Dana - Iarta-ma.mp3
+[SILENCE FOUND] D:\music all\music\blues\Dj Aligator - Close to you.mp3
+[SILENCE FOUND] D:\music all\music\blues\Five For Fighting - Superman.mp3
+[SILENCE FOUND] D:\music all\music\blues\Gareth Gates - Anyone of us.mp3
