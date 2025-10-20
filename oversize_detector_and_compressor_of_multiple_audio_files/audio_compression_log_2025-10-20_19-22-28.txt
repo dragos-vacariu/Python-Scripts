@@ -1,0 +1,46 @@
+Audio Compression Analysis Log
+Scan Path: C:\Users\black\Desktop\New folder
+Tolerance: 1.005
+Target Bitrate: 128k
+Generated: 2025-10-20 19:22:28.613761
+====================================================================================================
+
+File: C:\Users\black\Desktop\New folder\Colbie Caillat - Try (Dimaf).mp3
+Duration (s): 175.99
+Bitrate (kbps): 128.0
+Actual Size (MB): 2.89
+Expected Size (MB): 2.75
+Needs Compression: YES
+------------------------------------------------------------
+File: C:\Users\black\Desktop\New folder\Dimitris Pap - Lunar Reveries.mp3
+Duration (s): 320.01
+Bitrate (kbps): 128.0
+Actual Size (MB): 5.05
+Expected Size (MB): 5.0
+Needs Compression: YES
+------------------------------------------------------------
+File: C:\Users\black\Desktop\New folder\Hilary Duff - Sparks.mp3
+Duration (s): 186.03
+Bitrate (kbps): 128.0
+Actual Size (MB): 2.94
+Expected Size (MB): 2.91
+Needs Compression: YES
+------------------------------------------------------------
+File: C:\Users\black\Desktop\New folder\Ricky Martin - Livin' la Vida Loca.mp3
+Duration (s): 242.76
+Bitrate (kbps): 128.0
+Actual Size (MB): 3.93
+Expected Size (MB): 3.79
+Needs Compression: YES
+------------------------------------------------------------
+File: C:\Users\black\Desktop\New folder\Senses Fail - Hair Of The Dog.mp3
+Duration (s): 230.22
+Bitrate (kbps): 128.0
+Actual Size (MB): 5.6
+Expected Size (MB): 3.6
+Needs Compression: YES
+------------------------------------------------------------
+
+Summary:
+Total files analyzed: 24
+Files flagged for compression: 5

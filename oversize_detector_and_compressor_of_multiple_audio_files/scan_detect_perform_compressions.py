@@ -16,7 +16,7 @@ TOLERANCE = 1.005 #try to keep it between 1.005 and 1.25 where 1.005 is very str
 #THE ONLY DIFFERENCE IS WHICH FILES GET DETECTED AS OVERSIZE AND WHICH DOESN'T.
 
 #The root directory to be scanned for audio files
-INPUT_ROOT_DIR = r"D:\music all\music"
+INPUT_ROOT_DIR = r"D:\music all\music 7 (also new)"
 
 #An output directory where backups for the detected files will be stored
 ORIGINAL_BACKUPS_OUT_DIR = r".\Audio_Originals_Backup"
@@ -198,24 +198,19 @@ def compress_with_ffmpeg(src_path, dest_path, bitrate, codec):
         "-i", src_path,         # specify the source file
         "-map", "0:a",          # keep only audio streams, remove video cover-art
         
-        '''
-        Audio/video files often have multiple "streams":
-            Type	Example
-            0:v	Video (cover art, video track, etc.)
-            0:a	Audio (music, narration, etc.)
-            0:s	Subtitles or lyrics
-            0:d	Data (e.g., chapters)
-        '''
+        #Audio/video files often have multiple "streams":
+                #Type	Example
+                #0:v	Video (cover art, video track, etc.)
+                #0:a	Audio (music, narration, etc.)
+                #0:s	Subtitles or lyrics
+                #0:d	Data (e.g., chapters)
         
         "-vn",                  # disable video / remove the album cover art / thumbnail image
         
-        '''
-        -vn and -map do slightly overlapping things:
-            -vn → Ignore video streams
-            -map 0:a → Include only audio streams
-        
-        It’s redundant(not both necessary) but safe — many scripts use both for clarity and robustness.
-        '''
+        #-vn and -map do slightly overlapping things:
+                #-vn → Ignore video streams
+                #-map 0:a → Include only audio streams
+        #It’s redundant(not both necessary) but safe — many scripts use both for clarity and robustness.
         
         "-c:a", codec,          # set codec
         "-b:a", bitrate,        # target bitrate
@@ -277,7 +272,7 @@ def handle_flagged_files(results):
             print(f"⚠️ Failed to back up {src_path}: {e}")
             continue
 
-        # Compress to a lossy format
+        # Compress file if oversize was detected
         if ATTEMPT_COMPRESSION:
             new_ext, codec = get_output_extension_and_codec(src_ext)
             rel_path_compressed = os.path.splitext(rel_path)[0] + new_ext
