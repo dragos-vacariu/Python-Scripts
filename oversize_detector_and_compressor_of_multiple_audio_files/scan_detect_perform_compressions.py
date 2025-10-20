@@ -9,10 +9,14 @@ from mutagen import File as AudioFile
 AUDIO_EXTENSIONS = ('.mp3', '.wav', '.aac', '.flac', '.ogg', '.m4a')
 
 # this value can be tailored for more strict or less strict detections
-TOLERANCE = 1.25 
+# TOLERANCE should never go below 1.0. If the TOLERANCE would go below 1, you risk attempting to compressing files which cannot be reduced in size any longer.
+TOLERANCE = 1.005 #try to keep it between 1.005 and 1.25 where 1.005 is very strict detection.
+
+#THE COMPRESSION ALGORITHM WILL WORK SAME WAY REGARDLESS OF THE VALUE OF THE TOLERANCE. 
+#THE ONLY DIFFERENCE IS WHICH FILES GET DETECTED AS OVERSIZE AND WHICH DOESN'T.
 
 #The root directory to be scanned for audio files
-INPUT_ROOT_DIR = r"C:\Users\black\Desktop\New folder"
+INPUT_ROOT_DIR = r"D:\music all\music 6 (also new)"
 
 #An output directory where backups for the detected files will be stored
 ORIGINAL_BACKUPS_OUT_DIR = r".\Audio_Originals_Backup"
@@ -105,7 +109,9 @@ def get_output_extension_and_codec(input_ext):
 
 
 def compress_with_ffmpeg(src_path, dest_path, bitrate, codec):
-    """Use FFmpeg to compress an audio file to a specific bitrate and codec."""
+    """Use FFmpeg to compress an audio file to a specific bitrate and codec.
+    The compression will remove and cover-art that may be used for the thumbnail of the file.
+    """
     
     #Creating the directories for the output
     os.makedirs(os.path.dirname(dest_path), exist_ok=True)
