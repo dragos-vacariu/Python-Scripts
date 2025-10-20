@@ -7,13 +7,30 @@ from mutagen import File as AudioFile
 
 # ========================== CONFIGURATION ==========================
 AUDIO_EXTENSIONS = ('.mp3', '.wav', '.aac', '.flac', '.ogg', '.m4a')
-TOLERANCE = 1.25
+
+# this value can be tailored for more strict or less strict detections
+TOLERANCE = 1.25 
+
+#The root directory to be scanned for audio files
 INPUT_ROOT_DIR = r"C:\Users\black\Desktop\New folder"
+
+#An output directory where backups for the detected files will be stored
 ORIGINAL_BACKUPS_OUT_DIR = r".\Audio_Originals_Backup"
+
+#An output directory where the resulted compressed files will be stored
 COMPRESSED_OUT_DIR = r".\Audio_Compressed"
+
+#Target bitrate for the compression of the audio files
 TARGET_BITRATE = "128k"
-LOG_ONLY_FLAGGED = True
-ATTEMPT_COMPRESSION = True
+
+
+#Flags controlling the features of the scripts
+
+#turn this to true if you want the actions to be logged into a txt file
+LOG_ONLY_FLAGGED = True 
+
+#turn this to true if you want the script to attempt a compression for the detected oversized files
+ATTEMPT_COMPRESSION = True 
 # ===================================================================
 
 timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -22,17 +39,31 @@ LOG_FILE = f"audio_compression_log_{timestamp}.txt"
 
 def analyze_audio(file_path):
     """Extracts metadata and computes expected vs actual size."""
+    
+    #Opening audio file using mutagen and storing the file's metadata to variables
     audio = AudioFile(file_path)
     if not audio or not audio.info:
+        #if the file is not an audio file
         return None
+    
+    #Read and store the metadata
     duration = audio.info.length
     bitrate = getattr(audio.info, "bitrate", None)
     if bitrate is None or bitrate == 0:
+        #if the bitrate is not specified within the metadata
         return None
+    
+    #calculate the bitrate in kpbs
     bitrate_kbps = bitrate / 1000
+    
+    #calculate an expected size based on the bitrate
     expected_size_mb = (bitrate_kbps * duration) / (8 * 1024)
     actual_size_mb = os.path.getsize(file_path) / (1024 * 1024)
+    
+    #checking if the file would need a compression
     needs_compression = actual_size_mb > expected_size_mb * TOLERANCE
+    
+    #returning data
     return {
         "file": file_path,
         "duration_sec": round(duration, 2),
@@ -44,6 +75,7 @@ def analyze_audio(file_path):
 
 
 def scan_directory(root_dir):
+    '''This function will scan the given directory and for each file in the directory will call analyze_audio'''
     results = []
     for root, _, files in os.walk(root_dir):
         for file in files:
@@ -51,6 +83,7 @@ def scan_directory(root_dir):
                 file_path = os.path.join(root, file)
                 info = analyze_audio(file_path)
                 if info:
+                    #if the file was an audio file then append it to the results
                     results.append(info)
     return results
 
@@ -73,8 +106,11 @@ def get_output_extension_and_codec(input_ext):
 
 def compress_with_ffmpeg(src_path, dest_path, bitrate, codec):
     """Use FFmpeg to compress an audio file to a specific bitrate and codec."""
+    
+    #Creating the directories for the output
     os.makedirs(os.path.dirname(dest_path), exist_ok=True)
-
+    
+    #Creating the cmd command for the ffmpeg compression
     cmd = [
         "ffmpeg", "-y",
         "-i", src_path,
@@ -90,6 +126,7 @@ def compress_with_ffmpeg(src_path, dest_path, bitrate, codec):
 
     print(f"\nRunning FFmpeg: {' '.join(cmd)}")
 
+    #Attempt to run the ffmpeg command to perform the compression
     try:
         subprocess.run(
             cmd,
@@ -103,7 +140,9 @@ def compress_with_ffmpeg(src_path, dest_path, bitrate, codec):
         else:
             print("⚠️ No output file created.")
         return True
+    
     except subprocess.CalledProcessError as e:
+        #If there was any exception thrown while attempting compression
         print(f"⚠️ FFmpeg error compressing {src_path}:\n{e.stderr.decode(errors='ignore')[:500]}")
         return False
 
@@ -111,6 +150,7 @@ def compress_with_ffmpeg(src_path, dest_path, bitrate, codec):
 def handle_flagged_files(results):
     """Backs up and compresses flagged files."""
     flagged_files = [r for r in results if r["needs_compression"]]
+    
     if not flagged_files:
         print("\nNo flagged files found.")
         return
@@ -122,17 +162,21 @@ def handle_flagged_files(results):
         rel_path = os.path.relpath(src_path, INPUT_ROOT_DIR)
         src_ext = os.path.splitext(src_path)[1]
 
-        # 1️⃣ Backup original file
+        # Backup original file
         backup_dest = os.path.join(ORIGINAL_BACKUPS_OUT_DIR, rel_path)
+        
+        # Creating the backup directory
         os.makedirs(os.path.dirname(backup_dest), exist_ok=True)
+        
         try:
             shutil.copy2(src_path, backup_dest)
             print(f"📦 Backed up: {rel_path}")
+        
         except Exception as e:
             print(f"⚠️ Failed to back up {src_path}: {e}")
             continue
 
-        # 2️⃣ Compress to a lossy format
+        # Compress to a lossy format
         if ATTEMPT_COMPRESSION:
             new_ext, codec = get_output_extension_and_codec(src_ext)
             rel_path_compressed = os.path.splitext(rel_path)[0] + new_ext
@@ -140,6 +184,7 @@ def handle_flagged_files(results):
             os.makedirs(os.path.dirname(compressed_dest), exist_ok=True)
 
             ok = compress_with_ffmpeg(src_path, compressed_dest, TARGET_BITRATE, codec)
+            
             if ok:
                 new_size = os.path.getsize(compressed_dest) / (1024 * 1024)
                 print(f"✅ Compressed: {rel_path} → {new_ext} ({new_size:.2f} MB)")
@@ -150,6 +195,7 @@ def handle_flagged_files(results):
 
 
 def save_log(results):
+    '''This function will save the log after the processing is done'''
     with open(LOG_FILE, "w", encoding="utf-8") as log:
         log.write("Audio Compression Analysis Log\n")
         log.write(f"Scan Path: {INPUT_ROOT_DIR}\n")
