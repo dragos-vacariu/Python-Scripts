@@ -16,7 +16,7 @@ TOLERANCE = 1.005 #try to keep it between 1.005 and 1.25 where 1.005 is very str
 #THE ONLY DIFFERENCE IS WHICH FILES GET DETECTED AS OVERSIZE AND WHICH DOESN'T.
 
 #The root directory to be scanned for audio files
-INPUT_ROOT_DIR = r"D:\music all\music 6 (also new)"
+INPUT_ROOT_DIR = r"D:\music all\music"
 
 #An output directory where backups for the detected files will be stored
 ORIGINAL_BACKUPS_OUT_DIR = r".\Audio_Originals_Backup"
@@ -37,6 +37,7 @@ LOG_ONLY_FLAGGED = True
 ATTEMPT_COMPRESSION = True 
 # ===================================================================
 
+#Read the current timestamp and append it to the name of the log file.
 timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 LOG_FILE = f"audio_compression_log_{timestamp}.txt"
 
@@ -67,7 +68,7 @@ def analyze_audio(file_path):
     #checking if the file would need a compression
     needs_compression = actual_size_mb > expected_size_mb * TOLERANCE
     
-    #returning data
+    #returning metadata media info
     return {
         "file": file_path,
         "duration_sec": round(duration, 2),
@@ -81,9 +82,14 @@ def analyze_audio(file_path):
 def scan_directory(root_dir):
     '''This function will scan the given directory and for each file in the directory will call analyze_audio'''
     results = []
+    
+    # for each directory under the filepath
     for root, _, files in os.walk(root_dir):
+        # for each file in the directory
         for file in files:
+            #if file has an audio file extensions
             if file.lower().endswith(AUDIO_EXTENSIONS):
+                #store the filepath and get the metadata info
                 file_path = os.path.join(root, file)
                 info = analyze_audio(file_path)
                 if info:
@@ -94,14 +100,84 @@ def scan_directory(root_dir):
 
 def get_output_extension_and_codec(input_ext):
     """Choose output extension and codec for compression."""
+    
+    '''A codec (COder–DECoder) defines how audio is represented and compressed.
+    Different codecs balance 3 main factors:
+        Compression efficiency - How small it can make the file
+        Quality - How much it preserves the original sound
+        Compatibility - Which players or devices can play it
+    
+    '''
+    
     input_ext = input_ext.lower()
+    
+    #if file is .wav of .flac
     if input_ext in ('.wav', '.flac'):
-        # Convert lossless to MP3
+        # Convert file lossless to MP3
         return '.mp3', 'libmp3lame'
+        '''
+        CODEC: MP3 — libmp3lame
+        
+        Type: Lossy (some data is discarded)
+        Bitrate Range: 64–320 kbps
+
+        Pros:
+            Universally supported (phones, cars, TVs, everything)
+            Mature encoder (libmp3lame) gives consistent quality
+
+        Cons:
+            Less efficient than newer codecs (e.g. AAC)
+            Slightly “metallic” artifacts at low bitrates
+        
+        Use Case:
+            Your default compression format — perfect choice for your backup/compression pipeline.
+            Good for portable players, playlists, and compatibility.
+        '''
+    
+    #if file is .aac of .m4a
     elif input_ext in ('.aac', '.m4a'):
         return '.m4a', 'aac'
+        '''
+        CODEC: AAC — aac or libfdk_aac
+
+        Type: Lossy
+        Bitrate Range: 64–256 kbps
+
+        Pros:
+            More efficient than MP3 (same quality at ~30% smaller file size)
+            Used by iTunes, YouTube, Spotify, Android
+        
+        Cons:
+            Slightly slower to encode
+            Licensing for some versions (not an issue with FFmpeg’s built-in aac)
+        
+        Use Case:
+            Great if you want smaller output files while keeping similar perceived quality to MP3.
+            Ideal for .m4a files.
+        '''
+    
+    #if file is .ogg
     elif input_ext in ('.ogg',):
         return '.ogg', 'libvorbis'
+        '''
+        CODEC: OGG / Vorbis — libvorbis
+
+        Type: Lossy
+        Bitrate Range: 96–192 kbps (variable)
+
+        Pros:
+            Open-source, no patents
+            Good quality at low bitrates
+
+        Cons:
+            Not as widely supported as MP3/AAC
+            Slightly slower to decode
+
+        Use Case:
+            Open-source environments, game engines, Linux players.
+        '''
+    
+    #if file is audio but of a different type: example .3gp, .mp4, .wma
     else:
         # Default: re-encode MP3s to smaller bitrate
         return '.mp3', 'libmp3lame'
@@ -119,9 +195,28 @@ def compress_with_ffmpeg(src_path, dest_path, bitrate, codec):
     #Creating the cmd command for the ffmpeg compression
     cmd = [
         "ffmpeg", "-y",
-        "-i", src_path,
-        "-map", "0:a",          # keep only audio streams
-        "-vn",                  # disable video
+        "-i", src_path,         # specify the source file
+        "-map", "0:a",          # keep only audio streams, remove video cover-art
+        
+        '''
+        Audio/video files often have multiple "streams":
+            Type	Example
+            0:v	Video (cover art, video track, etc.)
+            0:a	Audio (music, narration, etc.)
+            0:s	Subtitles or lyrics
+            0:d	Data (e.g., chapters)
+        '''
+        
+        "-vn",                  # disable video / remove the album cover art / thumbnail image
+        
+        '''
+        -vn and -map do slightly overlapping things:
+            -vn → Ignore video streams
+            -map 0:a → Include only audio streams
+        
+        It’s redundant(not both necessary) but safe — many scripts use both for clarity and robustness.
+        '''
+        
         "-c:a", codec,          # set codec
         "-b:a", bitrate,        # target bitrate
         "-ar", "44100",         # resample
