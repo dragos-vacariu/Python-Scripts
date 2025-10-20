@@ -1,0 +1,324 @@
+import os
+import math
+import datetime
+import shutil
+import subprocess
+from mutagen import File as AudioFile
+
+# ========================== CONFIGURATION ==========================
+AUDIO_EXTENSIONS = ('.mp3', '.wav', '.aac', '.flac', '.ogg', '.m4a')
+
+# this value can be tailored for more strict or less strict detections
+# TOLERANCE should never go below 1.0. If the TOLERANCE would go below 1, you risk attempting to compressing files which cannot be reduced in size any longer.
+TOLERANCE = 1.005 #try to keep it between 1.005 and 1.25 where 1.005 is very strict detection.
+
+#THE COMPRESSION ALGORITHM WILL WORK SAME WAY REGARDLESS OF THE VALUE OF THE TOLERANCE. 
+#THE ONLY DIFFERENCE IS WHICH FILES GET DETECTED AS OVERSIZE AND WHICH DOESN'T.
+
+#The root directory to be scanned for audio files
+INPUT_ROOT_DIR = r"C:\Users\black\Desktop\New folder"
+
+#An output directory where the resulted compressed files will be stored
+COMPRESSED_OUT_DIR = r".\Audio_Converted_Compressed"
+
+#Target bitrate in (kbps) for the conversion/compresion of the audio files
+TARGET_BITRATE_VALUE = 128 #128 is standard for studio quality and small size
+#other options from (low quality - high quality): 96, 112, 128, 160, 192, 256, 320
+
+'''
+Audio bitrates range from low (e.g., 32-64 kbps for speech) to high (e.g., 192-320 kbps for high-quality music) 
+and include lossless formats (700-1411 kbps). 
+
+Common bitrates for various uses include: 
+    64–128 kbps for podcasts, 
+    128–192 kbps for casual music, 
+    and 192–320 kbps for high-quality music and video streaming. 
+
+Lossless formats like WAV or FLAC have much higher bitrates, around 1411 kbps. 
+'''
+
+
+#Flags controlling the features of the scripts
+
+#turn this to true if you want the actions to be logged into a txt file
+
+LOG_ONLY_FLAGGED = True 
+
+# ===================================================================
+
+#Read the current timestamp and append it to the name of the log file.
+timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+LOG_FILE = f"audio_compression_log_{timestamp}.txt"
+TARGET_BITRATE = str(TARGET_BITRATE_VALUE) + "k"
+
+def analyze_audio(file_path):
+    """Extracts metadata and computes expected vs actual size."""
+    
+    #Opening audio file using mutagen and storing the file's metadata to variables
+    audio = AudioFile(file_path)
+    if not audio or not audio.info:
+        #if the file is not an audio file
+        return None
+    
+    #Read and store the metadata
+    duration = audio.info.length
+    bitrate = getattr(audio.info, "bitrate", None)
+    if bitrate is None or bitrate == 0:
+        #if the bitrate is not specified within the metadata
+        return None
+    
+    #calculate the bitrate in kpbs
+    bitrate_kbps = bitrate / 1000
+    
+    #calculate an expected size based on the bitrate
+    expected_size_mb = (TARGET_BITRATE_VALUE * duration) / (8 * 1024)
+    actual_size_mb = os.path.getsize(file_path) / (1024 * 1024)
+    
+    #checking if the file would need a compression
+    needs_compression = True
+    
+    #returning metadata media info
+    return {
+        "file": file_path,
+        "bitrate_kbps": round(bitrate_kbps, 2),
+        "actual_size_mb": round(actual_size_mb, 2),
+        "expected_size_mb": round(expected_size_mb, 2),
+        "needs_compression": needs_compression,
+    }
+
+
+def scan_directory(root_dir):
+    '''This function will scan the given directory and for each file in the directory will call analyze_audio'''
+    results = []
+    
+    # for each directory under the filepath
+    for root, _, files in os.walk(root_dir):
+        # for each file in the directory
+        for file in files:
+            #if file has an audio file extensions
+            if file.lower().endswith(AUDIO_EXTENSIONS):
+                #store the filepath and get the metadata info
+                file_path = os.path.join(root, file)
+                info = analyze_audio(file_path)
+                if info:
+                    #if the file was an audio file then append it to the results
+                    results.append(info)
+    return results
+
+
+def get_output_extension_and_codec(input_ext):
+    """Choose output extension and codec for compression."""
+    
+    '''A codec (COder–DECoder) defines how audio is represented and compressed.
+    Different codecs balance 3 main factors:
+        Compression efficiency - How small it can make the file
+        Quality - How much it preserves the original sound
+        Compatibility - Which players or devices can play it
+    
+    '''
+    
+    input_ext = input_ext.lower()
+    
+    #if file is .wav of .flac
+    if input_ext in ('.wav', '.flac'):
+        # Convert file lossless to MP3
+        return '.mp3', 'libmp3lame'
+        '''
+        CODEC: MP3 — libmp3lame
+        
+        Type: Lossy (some data is discarded)
+        Bitrate Range: 64–320 kbps
+
+        Pros:
+            Universally supported (phones, cars, TVs, everything)
+            Mature encoder (libmp3lame) gives consistent quality
+
+        Cons:
+            Less efficient than newer codecs (e.g. AAC)
+            Slightly “metallic” artifacts at low bitrates
+        
+        Use Case:
+            Your default compression format — perfect choice for your backup/compression pipeline.
+            Good for portable players, playlists, and compatibility.
+        '''
+    
+    #if file is .aac of .m4a
+    elif input_ext in ('.aac', '.m4a'):
+        return '.m4a', 'aac'
+        '''
+        CODEC: AAC — aac or libfdk_aac
+
+        Type: Lossy
+        Bitrate Range: 64–256 kbps
+
+        Pros:
+            More efficient than MP3 (same quality at ~30% smaller file size)
+            Used by iTunes, YouTube, Spotify, Android
+        
+        Cons:
+            Slightly slower to encode
+            Licensing for some versions (not an issue with FFmpeg’s built-in aac)
+        
+        Use Case:
+            Great if you want smaller output files while keeping similar perceived quality to MP3.
+            Ideal for .m4a files.
+        '''
+    
+    #if file is .ogg
+    elif input_ext in ('.ogg',):
+        return '.ogg', 'libvorbis'
+        '''
+        CODEC: OGG / Vorbis — libvorbis
+
+        Type: Lossy
+        Bitrate Range: 96–192 kbps (variable)
+
+        Pros:
+            Open-source, no patents
+            Good quality at low bitrates
+
+        Cons:
+            Not as widely supported as MP3/AAC
+            Slightly slower to decode
+
+        Use Case:
+            Open-source environments, game engines, Linux players.
+        '''
+    
+    #if file is audio but of a different type: example .3gp, .mp4, .wma
+    else:
+        # Default: re-encode MP3s to smaller bitrate
+        return '.mp3', 'libmp3lame'
+
+
+
+def compress_with_ffmpeg(src_path, dest_path, bitrate, codec):
+    """Use FFmpeg to compress an audio file to a specific bitrate and codec.
+    The compression will remove and cover-art that may be used for the thumbnail of the file.
+    """
+    
+    #Creating the directories for the output
+    os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+    
+    #Creating the cmd command for the ffmpeg compression
+    cmd = [
+        "ffmpeg", "-y",
+        "-i", src_path,         # specify the source file
+        "-map", "0:a",          # keep only audio streams, remove video cover-art
+        
+        #Audio/video files often have multiple "streams":
+                #Type	Example
+                #0:v	Video (cover art, video track, etc.)
+                #0:a	Audio (music, narration, etc.)
+                #0:s	Subtitles or lyrics
+                #0:d	Data (e.g., chapters)
+        
+        "-vn",                  # disable video / remove the album cover art / thumbnail image
+        
+        #-vn and -map do slightly overlapping things:
+                #-vn → Ignore video streams
+                #-map 0:a → Include only audio streams
+        #It’s redundant(not both necessary) but safe — many scripts use both for clarity and robustness.
+        
+        "-c:a", codec,          # set codec
+        "-b:a", bitrate,        # target bitrate
+        "-ar", "44100",         # resample
+        "-ac", "2",             # stereo
+        "-movflags", "+faststart",
+        dest_path
+    ]
+
+    print(f"\nRunning FFmpeg: {' '.join(cmd)}")
+
+    #Attempt to run the ffmpeg command to perform the compression
+    try:
+        subprocess.run(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+        )
+        if os.path.exists(dest_path):
+            old_size = os.path.getsize(src_path) / (1024 * 1024)
+            new_size = os.path.getsize(dest_path) / (1024 * 1024)
+            print(f"✅ Input size: {old_size:.2f} MB")
+            print(f"✅ Output size: {new_size:.2f} MB")
+        else:
+            print("⚠️ No output file created.")
+        return True
+    
+    except subprocess.CalledProcessError as e:
+        #If there was any exception thrown while attempting compression
+        print(f"⚠️ FFmpeg error compressing {src_path}:\n{e.stderr.decode(errors='ignore')[:500]}")
+        return False
+
+
+def handle_flagged_files(results):
+    """Backs up and compresses flagged files."""
+    flagged_files = [r for r in results if r["needs_compression"]]
+    
+    if not flagged_files:
+        print("\nNo flagged files found.")
+        return
+
+    print(f"\nProcessing {len(flagged_files)} flagged files...")
+
+    for r in flagged_files:
+        src_path = r["file"]
+        rel_path = os.path.relpath(src_path, INPUT_ROOT_DIR)
+        src_ext = os.path.splitext(src_path)[1]
+
+        # Compress file
+        new_ext, codec = get_output_extension_and_codec(src_ext)
+        rel_path_compressed = os.path.splitext(rel_path)[0] + new_ext
+        compressed_dest = os.path.join(COMPRESSED_OUT_DIR, rel_path_compressed)
+        os.makedirs(os.path.dirname(compressed_dest), exist_ok=True)
+
+        ok = compress_with_ffmpeg(src_path, compressed_dest, TARGET_BITRATE, codec)
+        
+        if ok:
+            new_size = os.path.getsize(compressed_dest) / (1024 * 1024)
+            print(f"✅ Compressed: {rel_path} → {new_ext} ({new_size:.2f} MB)")
+        else:
+            print(f"⚠️ Compression failed for: {rel_path}")
+
+    print("\n✔️ Backup and compression process complete.")
+
+
+def save_log(results):
+    '''This function will save the log after the processing is done'''
+    with open(LOG_FILE, "w", encoding="utf-8") as log:
+        log.write("Audio Compression Analysis Log\n")
+        log.write(f"Scan Path: {INPUT_ROOT_DIR}\n")
+        log.write(f"Target Bitrate: {TARGET_BITRATE}\n")
+        log.write(f"Generated: {datetime.datetime.now()}\n")
+        log.write("=" * 100 + "\n\n")
+
+        for r in results:
+            if LOG_ONLY_FLAGGED and not r["needs_compression"]:
+                continue
+            log.write(f"File: {r['file']}\n")
+            log.write(f"Current Bitrate (kbps): {r['bitrate_kbps']}\n")
+            log.write("Future Bitrate (kbps):" + str(TARGET_BITRATE_VALUE) + "\n")
+            log.write(f"Actual Size (MB): {r['actual_size_mb']}\n")
+            log.write(f"Expected Size (MB): {r['expected_size_mb']}\n")
+            log.write("-" * 60 + "\n")
+
+        flagged = [r for r in results if r["needs_compression"]]
+        log.write("\nSummary:\n")
+        log.write(f"Total files analyzed: {len(results)}\n")
+        log.write(f"Files converted: {len(flagged)}\n")
+
+    print(f"\n📘 Log saved to: {LOG_FILE}")
+    print(f"Files flagged for compression: {len([r for r in results if r['needs_compression']])}")
+
+
+def main():
+    print(f"Scanning {INPUT_ROOT_DIR} for audio files...\n")
+    results = scan_directory(INPUT_ROOT_DIR)
+    save_log(results)
+    handle_flagged_files(results)
+
+
+if __name__ == "__main__":
+    main()
